@@ -1,0 +1,5 @@
+name: vLibrary
+version: '3.0'
+main: asia.virtualmc.vLibrary.VLibrary
+api-version: '1.21'
+depend: [HologramLib]
