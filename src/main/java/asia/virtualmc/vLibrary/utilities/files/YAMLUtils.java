@@ -4,6 +4,7 @@ import asia.virtualmc.vLibrary.utilities.messages.ConsoleUtils;
 import dev.dejvokep.boostedyaml.YamlDocument;
 import dev.dejvokep.boostedyaml.block.implementation.Section;
 import org.bukkit.plugin.Plugin;
+import org.enginehub.linbus.stream.token.LinToken;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
@@ -117,7 +118,24 @@ public class YAMLUtils {
                 .toArray();
     }
 
-    public static Map<String, Double> getMap(Plugin plugin, String fileName, String path) {
+    public static Map<String, Integer> getIntMap(Plugin plugin, String fileName, String path) {
+        Map<String, Integer> map = new HashMap<>();
+
+        YamlDocument yaml = getYaml(plugin, fileName);
+        if (yaml == null) return null;
+
+        Section section = getSection(yaml, path);
+        if (section == null) return null;
+
+        Set<String> keys = section.getRoutesAsStrings(false);
+        for (String key : keys) {
+            map.put(key, section.getInt(key));
+        }
+
+        return map;
+    }
+
+    public static Map<String, Double> getDoubleMap(Plugin plugin, String fileName, String path) {
         Map<String, Double> map = new HashMap<>();
 
         YamlDocument yaml = getYaml(plugin, fileName);
@@ -132,5 +150,84 @@ public class YAMLUtils {
         }
 
         return map;
+    }
+
+    public static Map<Integer, String> getStringMap(@NotNull Plugin plugin,
+                                                    @NotNull String fileName,
+                                                    @NotNull String route) {
+
+        Map<Integer, String> map = new HashMap<>();
+        YamlDocument yaml = getYaml(plugin, fileName);
+        if (yaml == null) return null;
+
+        Section section = getSection(yaml, route);
+        if (section == null) return null;
+
+        Set<String> keys = section.getRoutesAsStrings(false);
+        for (String key : keys) {
+            try {
+                int intKey = Integer.parseInt(key);
+                String value = section.getString(key);
+                map.put(intKey, value);
+            } catch (NumberFormatException ex) {
+                plugin.getLogger().warning(
+                        "Skipping non-integer key '" + key +
+                                "' in section '" + route + "' of " + fileName
+                );
+            }
+        }
+
+        return map;
+    }
+
+    public static Map<Integer, String> getStringMap(@NotNull Plugin plugin,
+                                                    @NotNull YamlDocument yaml,
+                                                    @NotNull String route) {
+
+        Map<Integer, String> map = new HashMap<>();
+        Section section = getSection(yaml, route);
+        if (section == null) return map;
+
+        for (String key : section.getRoutesAsStrings(false)) {
+            try {
+                int intKey = Integer.parseInt(key);
+                map.put(intKey, section.getString(key));
+            } catch (NumberFormatException ex) {
+                plugin.getLogger().warning(
+                        "Skipping non-integer key '" + key +
+                                "' in section '" + route + "'"
+                );
+            }
+        }
+
+        return map;
+    }
+
+    public static List<YamlDocument> getFiles(@NotNull Plugin plugin, @NotNull String dirPath) {
+        List<YamlDocument> documents = new ArrayList<>();
+
+        File directory = new File(plugin.getDataFolder(), dirPath);
+        if (!directory.exists() || !directory.isDirectory()) {
+            ConsoleUtils.severe("Directory not found: " + directory.getAbsolutePath());
+            return documents;
+        }
+
+        File[] ymlFiles = directory.listFiles((dir, name) -> name.toLowerCase().endsWith(".yml"));
+        if (ymlFiles == null || ymlFiles.length == 0) {
+            ConsoleUtils.warning("No .yml files found in: " + directory.getAbsolutePath());
+            return documents;
+        }
+
+        for (File file : ymlFiles) {
+            try {
+                YamlDocument yaml = YamlDocument.create(file);
+                documents.add(yaml);
+            } catch (IOException e) {
+                ConsoleUtils.severe("Failed to load YAML file: " + file.getName());
+                e.printStackTrace();
+            }
+        }
+
+        return documents;
     }
 }

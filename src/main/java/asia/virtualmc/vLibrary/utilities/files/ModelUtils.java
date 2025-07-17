@@ -88,6 +88,7 @@ public class ModelUtils {
      */
     public static void generateBaseModel(Plugin plugin, String name, String path,
                                          Map<Integer, String> modelCache) {
+
         Map<String, Object> jsonRoot = new LinkedHashMap<>();
         jsonRoot.put("parent", "item/generated");
 
@@ -108,7 +109,7 @@ public class ModelUtils {
         }
         jsonRoot.put("overrides", overrides);
 
-        File outputFile = new File(plugin.getDataFolder(), name.toLowerCase() + ".json");
+        File outputFile = new File(plugin.getDataFolder() + path, name.toLowerCase() + ".json");
         try (FileWriter writer = new FileWriter(outputFile)) {
             gson.toJson(jsonRoot, writer);
             plugin.getLogger().info("Successfully generated model file: " + outputFile.getPath());
