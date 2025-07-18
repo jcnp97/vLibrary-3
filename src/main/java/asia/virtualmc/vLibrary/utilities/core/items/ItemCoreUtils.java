@@ -92,16 +92,11 @@ public class ItemCoreUtils {
         String path = section.getString("model-path");
         String result = section.getString("generated-path");
         String material = section.getString("material");
-        Map<Integer, String> modelPathCache = new LinkedHashMap<>();
-
-        for (Map.Entry<String, Integer> entry : modelCache.entrySet()) {
-            modelPathCache.put(entry.getValue(), path + entry.getKey());
-        }
 
         for (String resourceName : modelCache.keySet()) {
             ModelUtils.generate(plugin, path, resourceName, jsonFile, result);
         }
 
-        ModelUtils.generateBaseModel(plugin, material, result, modelPathCache);
+        ModelUtils.generateBaseModel(plugin, material, result, path, modelCache);
     }
 }

@@ -63,6 +63,8 @@ public class ResourceUtils {
             material = Material.PAPER;
         }
 
+        int modelData = settings.getInt("starting-model-data");
+
         for (YamlDocument yaml : files) {
             Section resourceSection = yaml.getSection("itemsList");
             if (resourceSection == null) {
@@ -71,7 +73,6 @@ public class ResourceUtils {
             }
 
             Set<String> keys = new HashSet<>(resourceSection.getRoutesAsStrings(false));
-            int modelData = settings.getInt("starting-model-data");
             int limit = settings.getInt("lore-settings.character-limit");
             boolean limitLore = settings.getBoolean("lore-settings.auto-format");
             Map<Integer, String> regions = YAMLUtils.getStringMap(plugin, settings, "region-names");

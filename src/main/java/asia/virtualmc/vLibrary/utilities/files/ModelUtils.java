@@ -2,15 +2,24 @@ package asia.virtualmc.vLibrary.utilities.files;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 import org.bukkit.plugin.Plugin;
 
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.StandardOpenOption;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Level;
+
+import static kr.toxicity.model.api.data.raw.ModelData.GSON;
 
 public class ModelUtils {
     private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
@@ -87,7 +96,7 @@ public class ModelUtils {
      * @param modelCache  map containing custom_model_data as keys and model paths as values
      */
     public static void generateBaseModel(Plugin plugin, String name, String path,
-                                         Map<Integer, String> modelCache) {
+                                         String modelPath, Map<String, Integer> modelCache) {
 
         Map<String, Object> jsonRoot = new LinkedHashMap<>();
         jsonRoot.put("parent", "item/generated");
@@ -97,13 +106,13 @@ public class ModelUtils {
         jsonRoot.put("textures", textures);
 
         List<Map<String, Object>> overrides = new ArrayList<>();
-        for (Map.Entry<Integer, String> entry : modelCache.entrySet()) {
+        for (Map.Entry<String, Integer> entry : modelCache.entrySet()) {
             Map<String, Object> predicate = new LinkedHashMap<>();
-            predicate.put("custom_model_data", entry.getKey());
+            predicate.put("custom_model_data", entry.getValue());
 
             Map<String, Object> override = new LinkedHashMap<>();
             override.put("predicate", predicate);
-            override.put("model", entry.getValue());
+            override.put("model", modelPath + entry.getKey());
 
             overrides.add(override);
         }
@@ -118,5 +127,4 @@ public class ModelUtils {
             e.printStackTrace();
         }
     }
-
 }
