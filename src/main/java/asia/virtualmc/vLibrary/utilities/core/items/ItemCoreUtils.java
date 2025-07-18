@@ -28,7 +28,7 @@ public class ItemCoreUtils {
 
     public static Map<String, Integer> getInt(YamlDocument yaml, String path) {
         Map<String, Integer> stats = new HashMap<>();
-        String newPath = path + "custom-stats.integer";
+        String newPath = path + ".custom-stats.integer";
         Section section = YAMLUtils.getSection(yaml, newPath);
 
         if (section != null) {
@@ -88,9 +88,9 @@ public class ItemCoreUtils {
     }
 
     public static void generateModels(Plugin plugin, Section section, Map<String, Integer> modelCache) {
-        String jsonFile = section.getString("json-format");
-        String path = section.getString("path");
-        String result = section.getString("result");
+        String jsonFile = section.getString("file");
+        String path = section.getString("model-path");
+        String result = section.getString("generated-path");
         String material = section.getString("material");
         Map<Integer, String> modelPathCache = new LinkedHashMap<>();
 

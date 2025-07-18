@@ -49,6 +49,12 @@ public class PDCUtils {
         return pdc.getOrDefault(INTEGER_KEY, PersistentDataType.INTEGER, 0);
     }
 
+    public static String getString(ItemStack item, NamespacedKey STRING_KEY) {
+        if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) return "";
+        PersistentDataContainer pdc = item.getItemMeta().getPersistentDataContainer();
+        return pdc.getOrDefault(STRING_KEY, PersistentDataType.STRING, "");
+    }
+
     public static int[] getIntArray(ItemStack item, NamespacedKey key) {
         if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) return null;
 
@@ -84,6 +90,16 @@ public class PDCUtils {
 
         PersistentDataContainer pdc = meta.getPersistentDataContainer();
         pdc.set(PDC_KEY, PersistentDataType.INTEGER_ARRAY, value);
+    }
+
+    public static void addString(ItemMeta meta, NamespacedKey PDC_KEY, String value) {
+        if (meta == null) {
+            ConsoleUtils.severe("Unable to add PDC data on " + meta.getDisplayName() + " because meta is NULL.");
+            return;
+        }
+
+        PersistentDataContainer pdc = meta.getPersistentDataContainer();
+        pdc.set(PDC_KEY, PersistentDataType.STRING, value);
     }
 
     public static ItemStack addData(ItemStack item, NamespacedKey PDC_KEY, int value) {

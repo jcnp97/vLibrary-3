@@ -41,7 +41,6 @@ public class ResourceUtils {
                                               Map<Integer, Rarity> rarityMap) {
 
         Map<String, ItemStack> cache = new LinkedHashMap<>();
-        int itemID = 1;
 
         List<YamlDocument> files = YAMLUtils.getFiles(plugin, dirPath);
         if (files.isEmpty()) {
@@ -84,13 +83,16 @@ public class ResourceUtils {
                 Map<String, Double> doubleMap = ItemCoreUtils.getDouble(yaml, path);
 
                 // Lore Creation
+                int rarityID = intMap.get("rarity_id");
+
                 List<String> lore = new ArrayList<>();
-                lore.add(rarityMap.get(intMap.get("rarity_id")).tag);
+                lore.add(rarityMap.get(rarityID).tag);
                 if (limitLore) {
                     lore.addAll(LoreUtils.applyCharLimit(yaml.getStringList(path + ".lore"), limit));
                 } else {
-                    lore.add(yaml.getString(path + ".lore"));
+                    lore.addAll(yaml.getStringList(path + ".lore"));
                 }
+
                 if (!regions.isEmpty()) {
                     lore.add("");
                     lore.add(regions.get(intMap.get("region_id")));
@@ -100,12 +102,12 @@ public class ResourceUtils {
                 ItemMeta meta = item.getItemMeta();
 
                 if (meta != null) {
-                    MetaUtils.setDisplayName(meta, rarityMap.get(intMap.get("rarity_id")).color + name);
+                    MetaUtils.setDisplayName(meta, rarityMap.get(rarityID).color + name);
                     MetaUtils.setLore(meta, lore);
                     MetaUtils.setCustomModelData(meta, modelData);
 
                     // Apply PDC Data
-                    PDCUtils.addInteger(meta, resourceKey, itemID);
+                    PDCUtils.addString(meta, resourceKey, key + "_" + rarityID);
 
                     for (Map.Entry<String, Integer> entry : intMap.entrySet()) {
                         NamespacedKey namespacedKey = new NamespacedKey(plugin, entry.getKey().replace("-", "_"));
@@ -118,8 +120,8 @@ public class ResourceUtils {
                     }
 
                     item.setItemMeta(meta);
-                    cache.put(name + "_" + intMap.get("rarity_id"), item.clone());
-                    itemID++;
+                    cache.put(key + "_" + rarityID, item.clone());
+                    modelData++;
                 }
             }
         }
@@ -147,13 +149,25 @@ public class ResourceUtils {
             String color = yaml.getString("rarity-color." + rarityName);
             double exp = yaml.getDouble("exp." + rarityName);
             double weight = yaml.getDouble("weight." + rarityName);
-            double price = yaml.getDouble("price." + rarityName);
+            double price = yaml.getDouble("sell-price." + rarityName);
 
             cache.put(rarityID, new Rarity(tag, color, exp, weight, price));
             rarityID++;
         }
 
-        ConsoleUtils.info("Loaded " + cache.size() + " rarities from settings.yml");
+        ConsoleUtils.info("[" + plugin.getName() + "] ","Loaded " + cache.size() + " rarities from settings.yml");
         return cache;
+    }
+
+    public static void printRarities(Plugin plugin, Map<Integer, Rarity> map) {
+        for (Map.Entry<Integer, ResourceUtils.Rarity> entry : map.entrySet()) {
+            int id = entry.getKey();
+            ResourceUtils.Rarity r = entry.getValue();
+            ConsoleUtils.info("[" + plugin.getName() + "] ", id + ": tag=" + r.tag + ", " +
+                    "color=" + r.color + ", " +
+                    "exp=" + r.exp + ", " +
+                    "sell=" + r.price + ", " +
+                    "weight=" + r.weight);
+        }
     }
 }

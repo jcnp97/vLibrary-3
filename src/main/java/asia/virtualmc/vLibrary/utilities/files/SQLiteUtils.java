@@ -3,6 +3,8 @@ package asia.virtualmc.vLibrary.utilities.files;
 import asia.virtualmc.vLibrary.helpers.DriverShim;
 import asia.virtualmc.vLibrary.utilities.messages.ConsoleUtils;
 import org.bukkit.plugin.Plugin;
+import com.zaxxer.hikari.HikariConfig;
+import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,15 +12,21 @@ import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
-import java.sql.*;
-import java.util.Set;
+import java.sql.Connection;
+import java.sql.Driver;
+import java.sql.DriverManager;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SQLiteUtils {
-    private static final Set<Connection> activeConnections = ConcurrentHashMap.newKeySet();
     private static final String SQLITE_VERSION = "3.49.1.0";
     private static final String SQLITE_URL = "https://repo1.maven.org/maven2/org/xerial/sqlite-jdbc/" +
             SQLITE_VERSION + "/sqlite-jdbc-" + SQLITE_VERSION + ".jar";
+
+    // Pool map: fileName -> HikariDataSource
+    private static final Map<String, HikariDataSource> dataSources = new ConcurrentHashMap<>();
 
     /**
      * Initialize the SQLite driver by downloading the dependency at runtime
@@ -49,17 +57,14 @@ public class SQLiteUtils {
                 }
             }
 
-            // Create class loader and load the SQLite driver
+            // Load the driver into DriverManager
             URLClassLoader sqliteClassLoader = new URLClassLoader(
                     new URL[]{sqliteJar.toURI().toURL()},
                     SQLiteUtils.class.getClassLoader()
             );
-
-            // Load SQLite driver via reflection (this *registers* it with DriverManager)
             Class<?> driverClass = Class.forName("org.sqlite.JDBC", true, sqliteClassLoader);
             Driver driverInstance = (Driver) driverClass.getDeclaredConstructor().newInstance();
             DriverManager.registerDriver(new DriverShim(driverInstance));
-
             return true;
         } catch (Exception e) {
             ConsoleUtils.severe("Failed to initialize SQLite: " + e.getMessage());
@@ -69,13 +74,13 @@ public class SQLiteUtils {
     }
 
     /**
-     * Creates (if needed) and opens a SQLite database file under the plugin's data folder.
-     * Uses WAL journal mode and sets a 5s busy timeout to reduce locking errors.
+     * Opens (and pools) a SQLite database file under the plugin's data folder.
+     * Uses WAL journal mode and sets a 5s busy timeout.
      *
      * @param plugin       the plugin instance
      * @param relativePath path relative to plugin's data folder (e.g. "data/db")
      * @param fileName     database file name (e.g. "players.db")
-     * @return a live Connection, or null if creation/connection failed
+     * @return a pooled Connection, or null if creation/connection failed
      */
     public static Connection connect(Plugin plugin, String relativePath, String fileName) {
         File dataDir = plugin.getDataFolder();
@@ -92,12 +97,20 @@ public class SQLiteUtils {
                 return null;
             }
 
-            String url = "jdbc:sqlite:" + dbFile.getAbsolutePath() + "?journal_mode=WAL&busy_timeout=5000";
-            Connection connection = DriverManager.getConnection(url);
-
-            activeConnections.add(connection);
-            return connection;
-
+            String jdbcUrl = "jdbc:sqlite:" + dbFile.getAbsolutePath() + "?journal_mode=WAL&busy_timeout=5000";
+            HikariDataSource ds = dataSources.computeIfAbsent(fileName, key -> {
+                HikariConfig config = new HikariConfig();
+                config.setDriverClassName("org.sqlite.JDBC");
+                config.setJdbcUrl(jdbcUrl);
+                config.setMaximumPoolSize(10);
+                config.setPoolName("SQLitePool-" + fileName);
+                // SQLite PRAGMA via data source properties
+                config.addDataSourceProperty("journal_mode", "WAL");
+                config.addDataSourceProperty("busy_timeout", "5000");
+                config.setAutoCommit(false);
+                return new HikariDataSource(config);
+            });
+            return ds.getConnection();
         } catch (IOException e) {
             ConsoleUtils.severe("Could not connect to SQLite (" + fileName + "): " + e.getMessage());
             e.printStackTrace();
@@ -107,37 +120,45 @@ public class SQLiteUtils {
         }
     }
 
-    public static void checkpoint(Connection connection) {
-        if (connection == null) return;
-        try (Statement stmt = connection.createStatement()) {
+    /**
+     * Force a WAL checkpoint on a specific database pool.
+     */
+    public static void checkpoint(String fileName) {
+        HikariDataSource ds = dataSources.get(fileName);
+        if (ds == null) return;
+        try (Connection connection = ds.getConnection();
+             Statement stmt = connection.createStatement()) {
             stmt.execute("PRAGMA wal_checkpoint(FULL);");
         } catch (SQLException e) {
-            ConsoleUtils.severe("Failed to checkpoint SQLite WAL: " + e.getMessage());
+            ConsoleUtils.severe("Failed to checkpoint SQLite WAL for " + fileName + ": " + e.getMessage());
         }
     }
 
+    /**
+     * Force WAL checkpoint on all active database pools.
+     */
     public static void checkpointAll() {
-        for (Connection conn : activeConnections) {
-            if (conn != null) {
-                try (Statement stmt = conn.createStatement()) {
-                    stmt.execute("PRAGMA wal_checkpoint(FULL);");
-                } catch (SQLException e) {
-                    ConsoleUtils.severe("Failed to checkpoint SQLite: " + e.getMessage());
-                }
+        for (Map.Entry<String, HikariDataSource> entry : dataSources.entrySet()) {
+            try (Connection conn = entry.getValue().getConnection();
+                 Statement stmt = conn.createStatement()) {
+                stmt.execute("PRAGMA wal_checkpoint(FULL);");
+            } catch (SQLException e) {
+                ConsoleUtils.severe("Failed to checkpoint SQLite WAL for " + entry.getKey() + ": " + e.getMessage());
             }
         }
     }
 
+    /**
+     * Close all HikariCP pools and clear references.
+     */
     public static void closeAll() {
-        for (Connection conn : activeConnections) {
-            if (conn != null) {
-                try {
-                    conn.close();
-                } catch (SQLException e) {
-                    ConsoleUtils.severe("Failed to close SQLite connection: " + e.getMessage());
-                }
+        for (HikariDataSource ds : dataSources.values()) {
+            try {
+                ds.close();
+            } catch (Exception e) {
+                ConsoleUtils.severe("Failed to close HikariCP pool: " + e.getMessage());
             }
         }
-        activeConnections.clear();
+        dataSources.clear();
     }
 }
