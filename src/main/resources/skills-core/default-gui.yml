@@ -1,6 +1,7 @@
-guiSettings:
-  invisible-model-data: 10367
-  # GUI Titles
+invisible-item:
+  material: PAPER
+  model-data: 10367
+guiTitles:
   salvage-gui-title: "§f"
   comp-gui-title: "§f"
   trait-gui-title: "§f"

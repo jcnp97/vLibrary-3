@@ -1,6 +1,7 @@
 package asia.virtualmc.vLibrary.utilities.items;
 
 import org.bukkit.Location;
+import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
@@ -15,6 +16,19 @@ import org.jetbrains.annotations.NotNull;
 import java.util.HashMap;
 
 public class ItemStackUtils {
+
+    public static ItemStack create(Material material, int customModelData) {
+        ItemStack item = new ItemStack(material);
+        ItemMeta meta = item.getItemMeta();
+
+        if (meta != null) {
+            meta.setCustomModelData(customModelData);
+            item.setItemMeta(meta);
+            return item;
+        }
+
+        return null;
+    }
 
     public static ItemStack applyUniqueKey(@NotNull Plugin plugin, @NotNull ItemStack item) {
         NamespacedKey UNSTACKABLE_KEY = new NamespacedKey(plugin, "unique_id");

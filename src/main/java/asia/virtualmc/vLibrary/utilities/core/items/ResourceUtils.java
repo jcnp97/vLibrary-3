@@ -75,7 +75,7 @@ public class ResourceUtils {
             Set<String> keys = new HashSet<>(resourceSection.getRoutesAsStrings(false));
             int limit = settings.getInt("lore-settings.character-limit");
             boolean limitLore = settings.getBoolean("lore-settings.auto-format");
-            Map<Integer, String> regions = YAMLUtils.getStringMap(plugin, settings, "region-names");
+            Map<Integer, String> regions = YAMLUtils.getStringMap(settings, "region-names");
 
             for (String key : keys) {
                 String path = "itemsList." + key;

@@ -1,7 +1,6 @@
 package asia.virtualmc.vLibrary;
 
 import asia.virtualmc.vLibrary.commands.CommandManager;
-import asia.virtualmc.vLibrary.core.CoreManager;
 import asia.virtualmc.vLibrary.integrations.holograms.HologramUtils;
 import asia.virtualmc.vLibrary.integrations.IntegrationManager;
 import asia.virtualmc.vLibrary.storage.StorageManager;
@@ -15,7 +14,6 @@ import org.bukkit.plugin.java.JavaPlugin;
 public final class VLibrary extends JavaPlugin {
     private static VLibrary vlib;
     private CommandManager commandManager;
-    private CoreManager coreManager;
     private IntegrationManager integrationManager;
     private TaskManager taskManager;
 
@@ -24,7 +22,6 @@ public final class VLibrary extends JavaPlugin {
         CommandAPI.onEnable();
         vlib = this;
 
-        this.coreManager = new CoreManager(this);
         this.integrationManager = new IntegrationManager(this);
         this.taskManager = new TaskManager(this);
         this.commandManager = new CommandManager(this);
@@ -57,10 +54,6 @@ public final class VLibrary extends JavaPlugin {
 
     public static VLibrary getInstance() {
         return vlib;
-    }
-
-    public CoreManager getCoreManager() {
-        return coreManager;
     }
 
     public IntegrationManager getIntegrationManager() { return integrationManager; }

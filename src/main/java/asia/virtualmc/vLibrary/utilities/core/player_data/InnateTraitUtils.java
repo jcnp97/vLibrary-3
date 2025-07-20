@@ -57,7 +57,7 @@ public class InnateTraitUtils {
 
             int modelData = yaml.getInt(path + "custom_model_data");
             int slot = yaml.getInt(path + "slot");
-            Map<String, Double> values = YAMLUtils.getDoubleMap(plugin, fileName, path + "effects");
+            Map<String, Double> values = YAMLUtils.getDoubleMap(yaml, path + "effects");
 
             if (materialName == null || displayName == null) {
                 ConsoleUtils.severe(plugin.getName(), "Invalid configuration for trait name: " + traitName);

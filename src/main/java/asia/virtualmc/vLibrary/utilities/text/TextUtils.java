@@ -198,4 +198,12 @@ public class TextUtils {
 
         return result;
     }
+
+    public static String splitBeforeLastUnderscore(String input) {
+        int lastUnderscore = input.lastIndexOf('_');
+        if (lastUnderscore == -1) {
+            return input;
+        }
+        return input.substring(0, lastUnderscore);
+    }
 }

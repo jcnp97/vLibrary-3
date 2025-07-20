@@ -4,13 +4,13 @@ import asia.virtualmc.vLibrary.utilities.messages.ConsoleUtils;
 import dev.dejvokep.boostedyaml.YamlDocument;
 import dev.dejvokep.boostedyaml.block.implementation.Section;
 import org.bukkit.plugin.Plugin;
-import org.enginehub.linbus.stream.token.LinToken;
+import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.util.*;
+import java.util.jar.JarEntry;
+import java.util.jar.JarFile;
 
 public class YAMLUtils {
 
@@ -135,14 +135,12 @@ public class YAMLUtils {
         return map;
     }
 
-    public static Map<String, Double> getDoubleMap(Plugin plugin, String fileName, String path) {
+    public static Map<String, Double> getDoubleMap(@NotNull YamlDocument yaml,
+                                                   @NotNull String route) {
         Map<String, Double> map = new HashMap<>();
 
-        YamlDocument yaml = getYaml(plugin, fileName);
-        if (yaml == null) return null;
-
-        Section section = getSection(yaml, path);
-        if (section == null) return null;
+        Section section = getSection(yaml, route);
+        if (section == null) return map;
 
         Set<String> keys = section.getRoutesAsStrings(false);
         for (String key : keys) {
@@ -152,36 +150,7 @@ public class YAMLUtils {
         return map;
     }
 
-    public static Map<Integer, String> getStringMap(@NotNull Plugin plugin,
-                                                    @NotNull String fileName,
-                                                    @NotNull String route) {
-
-        Map<Integer, String> map = new HashMap<>();
-        YamlDocument yaml = getYaml(plugin, fileName);
-        if (yaml == null) return null;
-
-        Section section = getSection(yaml, route);
-        if (section == null) return null;
-
-        Set<String> keys = section.getRoutesAsStrings(false);
-        for (String key : keys) {
-            try {
-                int intKey = Integer.parseInt(key);
-                String value = section.getString(key);
-                map.put(intKey, value);
-            } catch (NumberFormatException ex) {
-                plugin.getLogger().warning(
-                        "Skipping non-integer key '" + key +
-                                "' in section '" + route + "' of " + fileName
-                );
-            }
-        }
-
-        return map;
-    }
-
-    public static Map<Integer, String> getStringMap(@NotNull Plugin plugin,
-                                                    @NotNull YamlDocument yaml,
+    public static Map<Integer, String> getStringMap(@NotNull YamlDocument yaml,
                                                     @NotNull String route) {
 
         Map<Integer, String> map = new HashMap<>();
@@ -193,10 +162,7 @@ public class YAMLUtils {
                 int intKey = Integer.parseInt(key);
                 map.put(intKey, section.getString(key));
             } catch (NumberFormatException ex) {
-                plugin.getLogger().warning(
-                        "Skipping non-integer key '" + key +
-                                "' in section '" + route + "'"
-                );
+                ConsoleUtils.severe("Skipping non-integer key " + key + " in section " + route);
             }
         }
 
@@ -229,5 +195,40 @@ public class YAMLUtils {
         }
 
         return documents;
+    }
+
+    public static void copyAllResources(JavaPlugin plugin, File jarFile) {
+        File pluginFolder = plugin.getDataFolder();
+        if (pluginFolder.exists()) return;
+        pluginFolder.mkdirs();
+
+        try (JarFile jar = new JarFile(jarFile)) {
+            for (JarEntry entry : Collections.list(jar.entries())) {
+                String name = entry.getName();
+
+                if (name.startsWith("META-INF") || name.equals("plugin.yml")) continue;
+                if (entry.isDirectory()) continue;
+                if (name.endsWith(".class")) continue;
+                if (!name.endsWith(".yml") && !name.contains("/")) continue;
+
+                File outFile = new File(pluginFolder, name);
+                if (!outFile.getParentFile().exists()) {
+                    outFile.getParentFile().mkdirs();
+                }
+
+                try (InputStream in = plugin.getResource(name);
+                     OutputStream out = new FileOutputStream(outFile)) {
+                    if (in == null) continue;
+                    byte[] buffer = new byte[1024];
+                    int len;
+                    while ((len = in.read(buffer)) > 0) {
+                        out.write(buffer, 0, len);
+                    }
+                }
+            }
+        } catch (IOException e) {
+            ConsoleUtils.severe(plugin.getName(), "Failed to extract default resources: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 }
